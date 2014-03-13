@@ -8,7 +8,7 @@ using System.Xml.Linq;
 using CommandLine;
 using CommandLine.Text;
 
-using JunctionPointUtils;
+using Monitor.Core.Utilities;
 
 namespace AccuRev2Git
 {
@@ -182,17 +182,11 @@ namespace AccuRev2Git
 
 		static void loadTransaction(string depotName, string streamName, int transactionId, string workingDir, XElement transaction)
 		{
-			// ReSharper disable PossibleNullReferenceException
+// ReSharper disable PossibleNullReferenceException
 			var accurevUser = transaction.Attribute("user").Value;
 			var gitUser = translateUser(accurevUser);
-			/*
-						if (gitUser == null)
-						{
-							throw new ApplicationException(string.Format("Accurev user {0} not recognised in Git", accurevUser));
-						}
-			*/
 			var unixDate = long.Parse(transaction.Attribute("time").Value);
-			// ReSharper restore PossibleNullReferenceException
+// ReSharper restore PossibleNullReferenceException
 			var issueNumNodes = transaction.Descendants("version").Descendants("issueNum");
 			var issueNums = (issueNumNodes == null || issueNumNodes.Count() == 0 ? string.Empty : issueNumNodes.Select(n => n.Value).Distinct().Aggregate(string.Empty, (seed, num) => seed + ", " + num).Substring(2));
 			var commentNode = transaction.Descendants("comment").FirstOrDefault();
@@ -233,25 +227,10 @@ namespace AccuRev2Git
 				return;
 			}
 
-			if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
-			{
-//				File.Delete(path);
-				return;
-			}
-			
-//			try
-			{
 			foreach (string directory in Directory.GetDirectories(path))
 			{
 				deleteDirectory(directory);
 			}
-			}
-/*
-			catch (DirectoryNotFoundException)
-			{
-				return;
-			}
-*/
 
 			try
 			{
@@ -299,14 +278,11 @@ namespace AccuRev2Git
 			var result = process.StandardOutput.ReadToEnd();
 			if (process.StandardError.EndOfStream == false)
 			{
-				string errors = process.StandardError.ReadToEnd();
+				var errors = process.StandardError.ReadToEnd();
 				if (!errors.Contains("is defunct") && !errors.Contains("No element named") && !errors.Contains("Unable to proceed with annotate.") && !errors.Contains("Specified version not found for:"))
 				{
 					Debug.WriteLine(errors);
-					if (!errors.Contains("Failed to create symbolic-link"))
-					{
-						throw new ApplicationException(string.Format("AccuRev has returned an error: {0}", errors));
-					}
+					throw new ApplicationException(string.Format("AccuRev has returned an error: {0}", errors));
 				}
 			}
 			return result;
@@ -330,11 +306,7 @@ namespace AccuRev2Git
 			if (!ignoreErrors && process.StandardError.EndOfStream == false)
 			{
 				var errors = process.StandardError.ReadToEnd();
-				Debug.WriteLine(errors);
-				if (!errors.Contains("fatal: Not a git repository"))
-				{
-					throw new ApplicationException(string.Format("Git has returned an error: {0}", errors));
-				}
+				throw new ApplicationException(string.Format("Git has returned an error: {0}", errors));
 			}
 			return output;
 		}
