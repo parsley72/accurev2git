@@ -8,7 +8,7 @@ using System.Xml.Linq;
 using CommandLine;
 using CommandLine.Text;
 
-using Monitor.Core.Utilities;
+using JunctionPointUtils;
 
 namespace AccuRev2Git
 {
