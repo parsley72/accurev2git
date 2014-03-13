@@ -282,7 +282,10 @@ namespace AccuRev2Git
 				if (!errors.Contains("is defunct") && !errors.Contains("No element named") && !errors.Contains("Unable to proceed with annotate.") && !errors.Contains("Specified version not found for:"))
 				{
 					Debug.WriteLine(errors);
-					throw new ApplicationException(string.Format("AccuRev has returned an error: {0}", errors));
+					if (!errors.Contains("Failed to create symbolic-link"))
+					{
+						throw new ApplicationException(string.Format("AccuRev has returned an error: {0}", errors));
+					}
 				}
 			}
 			return result;
