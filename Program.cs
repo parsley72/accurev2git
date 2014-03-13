@@ -8,6 +8,8 @@ using System.Xml.Linq;
 using CommandLine;
 using CommandLine.Text;
 
+using Monitor.Core.Utilities;
+
 namespace AccuRev2Git
 {
 	class Options
@@ -218,6 +220,13 @@ namespace AccuRev2Git
 		/// </summary>
 		public static void deleteDirectory(string path)
 		{
+			// Check if it's a function
+			if (JunctionPoint.Exists(path))
+			{
+				JunctionPoint.Delete(path);
+				return;
+			}
+
 			foreach (string directory in Directory.GetDirectories(path))
 			{
 				deleteDirectory(directory);
@@ -247,7 +256,7 @@ namespace AccuRev2Git
 			foreach (var file in Directory.GetFiles(workingDir).Where(file => !file.EndsWith(".gitignore")))
 			{
 				File.Delete(file);
-		}
+			}
 		}
 
 		static string execAccuRev(string arguments, string workingDir)
