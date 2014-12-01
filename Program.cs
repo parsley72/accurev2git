@@ -116,7 +116,7 @@ namespace AccuRev2Git
 			if (xdoc.Document == null || xdoc.Nodes().Any() == false)
 			{
 				Console.WriteLine("Retrieving complete history of {0} depot, {1} stream, from AccuRev server...", depotName, streamName);
-				var temp = execAccuRev(string.Format("hist -p \"{0}\" -s \"{0}{1}\" -k promote -fx", depotName, (string.IsNullOrEmpty(streamName) ? "" : "_" + streamName)), workingDir);
+				var temp = execAccuRev(string.Format("hist -p \"{0}\" -s \"{1}\" -k promote -fx", depotName, (string.IsNullOrEmpty(streamName) ? "" : streamName)), workingDir);
 				File.WriteAllText(tempFile, temp);
 				xdoc = XDocument.Parse(temp);
 			}
@@ -134,7 +134,14 @@ namespace AccuRev2Git
 
 				Console.WriteLine("Resuming from last completed transaction {0}.", lastTransaction);
 				Console.WriteLine("Retrieving history as of {0} for {1} depot, {2} stream, from AccuRev server...", lastTransaction, depotName, streamName);
-				var temp = execAccuRev(string.Format("hist -p \"{0}\" -s \"{0}{1}\" -k promote -t {2}-now -fx", depotName, (string.IsNullOrEmpty(streamName) ? "" : "_" + streamName), lastTransaction), workingDir);
+				string temp = "";
+				if (string.IsNullOrEmpty (streamName))
+				{
+					temp = execAccuRev (string.Format ("hist -p \"{0}\" -k promote -t {2}-now -fx", depotName, lastTransaction), workingDir);
+				} else
+				{
+					temp = execAccuRev (string.Format ("hist -p \"{0}\" -s \"{1}\" -k promote -t {2}-now -fx", depotName, streamName, lastTransaction), workingDir);
+				}
 				File.WriteAllText(tempFile, temp);
 				xdoc = XDocument.Parse(temp);
 
@@ -202,7 +209,7 @@ namespace AccuRev2Git
 			var commentFilePath = Path.GetFullPath(commentFile);
 			File.WriteAllText(commentFile, comment);
 			execClean(workingDir);
-			execAccuRev(string.Format("pop -R -O -v \"{0}{1}\" -L . -t {2} .", depotName, (string.IsNullOrEmpty(streamName) ? "" : "_" + streamName), transactionId), workingDir);
+			execAccuRev(string.Format("pop -R -O -v \"{0}\" -L . -t {1} .", (string.IsNullOrEmpty(streamName) ? "" : streamName), transactionId), workingDir);
 			execGitRaw("add --all", workingDir);
 			execGitCommit(string.Format("commit --date={0} --author={1} --file=\"{2}\"", unixDate, gitUser, commentFilePath), workingDir, unixDate.ToString(), gitUser);
 			execGitRaw(string.Format("config accurev2git.lasttran {0}", transactionId), workingDir);
