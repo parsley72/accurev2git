@@ -220,11 +220,14 @@ namespace AccuRev2Git
 		/// </summary>
 		public static void deleteDirectory(string path)
 		{
-			// Check if it's a function
-			if (JunctionPoint.Exists(path))
+			if (Environment.OSVersion.Platform == PlatformID.Win32Windows)
 			{
-				JunctionPoint.Delete(path);
-				return;
+				// Check if it's a function
+				if (JunctionPoint.Exists (path))
+				{
+					JunctionPoint.Delete (path);
+					return;
+				}
 			}
 
 			foreach (string directory in Directory.GetDirectories(path))
