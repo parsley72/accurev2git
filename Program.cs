@@ -115,8 +115,17 @@ namespace AccuRev2Git
 
 			if (xdoc.Document == null || xdoc.Nodes().Any() == false)
 			{
-				Console.WriteLine("Retrieving complete history of {0} depot, {1} stream, from AccuRev server...", depotName, streamName);
-				var temp = execAccuRev(string.Format("hist -p \"{0}\" -s \"{1}\" -k promote -fx", depotName, (string.IsNullOrEmpty(streamName) ? "" : streamName)), workingDir);
+				string temp = "";
+				if (string.IsNullOrEmpty(streamName))
+				{
+					Console.WriteLine("Retrieving complete history of {0} depot from AccuRev server...", depotName);
+					temp = execAccuRev(string.Format("hist -p \"{0}\" -k promote -fx", depotName), workingDir);
+				}
+				else
+				{
+					Console.WriteLine("Retrieving complete history of {0} depot, {1} stream, from AccuRev server...", depotName, streamName);
+					temp = execAccuRev(string.Format("hist -p \"{0}\" -s \"{1}\" -k promote -fx", depotName, streamName), workingDir);
+				}
 				File.WriteAllText(tempFile, temp);
 				xdoc = XDocument.Parse(temp);
 			}
@@ -133,14 +142,16 @@ namespace AccuRev2Git
 					throw new ApplicationException("Cannot resume - no last transaction was found in git config key 'accurev2git.lasttran'.");
 
 				Console.WriteLine("Resuming from last completed transaction {0}.", lastTransaction);
-				Console.WriteLine("Retrieving history as of {0} for {1} depot, {2} stream, from AccuRev server...", lastTransaction, depotName, streamName);
 				string temp = "";
-				if (string.IsNullOrEmpty (streamName))
+				if (string.IsNullOrEmpty(streamName))
 				{
-					temp = execAccuRev (string.Format ("hist -p \"{0}\" -k promote -t {2}-now -fx", depotName, lastTransaction), workingDir);
-				} else
+					Console.WriteLine("Retrieving history as of {0} for {1} depot from AccuRev server...", lastTransaction, depotName);
+					temp = execAccuRev(string.Format("hist -p \"{0}\" -k promote -t {1}-now -fx", depotName, lastTransaction), workingDir);
+				}
+				else
 				{
-					temp = execAccuRev (string.Format ("hist -p \"{0}\" -s \"{1}\" -k promote -t {2}-now -fx", depotName, streamName, lastTransaction), workingDir);
+					Console.WriteLine("Retrieving history as of {0} for {1} depot, {2} stream, from AccuRev server...", lastTransaction, depotName, streamName);
+					temp = execAccuRev(string.Format("hist -p \"{0}\" -s \"{1}\" -k promote -t {2}-now -fx", depotName, streamName, lastTransaction), workingDir);
 				}
 				File.WriteAllText(tempFile, temp);
 				xdoc = XDocument.Parse(temp);
@@ -209,7 +220,14 @@ namespace AccuRev2Git
 			var commentFilePath = Path.GetFullPath(commentFile);
 			File.WriteAllText(commentFile, comment);
 			execClean(workingDir);
-			execAccuRev(string.Format("pop -R -O -v \"{0}\" -L . -t {1} .", (string.IsNullOrEmpty(streamName) ? "" : streamName), transactionId), workingDir);
+			if (string.IsNullOrEmpty(streamName))
+			{
+				execAccuRev(string.Format("pop -R -O -v \"{0}\" -L . -t {1} .", depotName, transactionId), workingDir);
+			}
+			else
+			{
+				execAccuRev(string.Format("pop -R -O -v \"{0}\" -L . -t {1} .", streamName, transactionId), workingDir);
+			}
 			execGitRaw("add --all", workingDir);
 			execGitCommit(string.Format("commit --date={0} --author={1} --file=\"{2}\"", unixDate, gitUser, commentFilePath), workingDir, unixDate.ToString(), gitUser);
 			execGitRaw(string.Format("config accurev2git.lasttran {0}", transactionId), workingDir);
