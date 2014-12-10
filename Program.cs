@@ -187,6 +187,7 @@ namespace AccuRev2Git
 				execGitRaw("add --all", workingDir);
 				execGitCommit(string.Format("commit --date={0} --author={1} -m \"Initial git commit.\"", initialDate, defaultGitUser), workingDir, initialDate.ToString(), defaultGitUser);
 				execGitRaw(string.Format("checkout -b \"{0}\"", streamName), workingDir, true);
+				execGitRaw(string.Format("config accurev2git.lasttran {0}", 1), workingDir);
 			}
 			foreach (var transaction in nodes)
 			{
