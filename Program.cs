@@ -203,16 +203,20 @@ namespace AccuRev2Git
 		static void loadTransaction(string depotName, string streamName, int transactionId, string workingDir, XElement transaction)
 		{
 // ReSharper disable PossibleNullReferenceException
-			var accurevUser = transaction.Attribute("user").Value;
-			var gitUser = translateUser(accurevUser);
-			var unixDate = long.Parse(transaction.Attribute("time").Value);
+			string accurevUser = transaction.Attribute("user").Value;
+			GitUser gitUser = translateUser(accurevUser);
+			if (gitUser == null)
+			{
+				throw new ApplicationException(string.Format("Accurev user {0} not recognised in Git", accurevUser));
+			}
+			Int64 unixDate = long.Parse(transaction.Attribute("time").Value);
 // ReSharper restore PossibleNullReferenceException
 			var issueNumNodes = transaction.Descendants("version").Descendants("issueNum");
 			var issueNums = (issueNumNodes == null || issueNumNodes.Count() == 0 ? string.Empty : issueNumNodes.Select(n => n.Value).Distinct().Aggregate(string.Empty, (seed, num) => seed + ", " + num).Substring(2));
 			var commentNode = transaction.Descendants("comment").FirstOrDefault();
-			var comment = (commentNode == null ? string.Empty : commentNode.Value);
+			string comment = (commentNode == null ? string.Empty : commentNode.Value);
 			comment = string.IsNullOrEmpty(comment) ? "[no original comment]" : comment;
-			var commentLines = comment.Split(new[] { "\n" }, 2, StringSplitOptions.None);
+			string[] commentLines = comment.Split(new[] { "\n" }, 2, StringSplitOptions.None);
 			if (commentLines.Length > 1)
 				comment = commentLines[0] + Environment.NewLine + Environment.NewLine + commentLines[1];
 			comment += string.Format("{0}{0}[AccuRev Transaction #{1}]", Environment.NewLine, transactionId);
@@ -250,9 +254,9 @@ namespace AccuRev2Git
 			if (Environment.OSVersion.Platform == PlatformID.Win32Windows)
 			{
 				// Check if it's a function
-				if (JunctionPoint.Exists (path))
+				if (JunctionPoint.Exists(path))
 				{
-					JunctionPoint.Delete (path);
+					JunctionPoint.Delete(path);
 					return;
 				}
 			}
