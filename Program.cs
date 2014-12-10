@@ -261,9 +261,13 @@ namespace AccuRev2Git
 				}
 			}
 
+			Mono.Unix.UnixSymbolicLinkInfo info = new Mono.Unix.UnixSymbolicLinkInfo(path);
+			if (info.FileType == FileTypes.Directory)
+			{
 				foreach (string directory in Directory.GetDirectories(path))
 				{
 					deleteDirectory(directory);
+				}
 			}
 
 			try
