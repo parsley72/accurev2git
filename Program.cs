@@ -7,6 +7,7 @@ using System.Linq;
 using System.Xml.Linq;
 using CommandLine;
 using CommandLine.Text;
+using Mono.Unix;
 
 using JunctionPointUtils;
 
@@ -255,9 +256,9 @@ namespace AccuRev2Git
 				}
 			}
 
-			foreach (string directory in Directory.GetDirectories(path))
-			{
-				deleteDirectory(directory);
+				foreach (string directory in Directory.GetDirectories(path))
+				{
+					deleteDirectory(directory);
 			}
 
 			try
