@@ -2,13 +2,23 @@
 
 AccuRev2Git is a tool to convert an AccuRev depot into a git repo. A specified AccuRev stream will be the target of the conversion, and all promotes to that stream will be turned into commits within the new git repository.
 
-Currently there are 2 different tools in this repo. One uses .NET and was written in C# by the original author https://github.com/rlaneve/accurev2git
-The original tool is in the dotNET folder at the root of the repo.
+### Getting Started ###
+- Update the users.txt file.
 
-The other is a rewrite in python that attempts to make an optimisation in the way that the conversion is done.
-The python rewrite is in the python folder at the root of the repo.
+    The format is described within the file itself
+- Update the app.config file.
 
-Both have a README.md tailored to their implementation in their respective folders.
+    Make sure the paths to accurev.exe and git.exe are correct for your machine, and set the default git user name
+3. Compile the solution
+
+### How to use ###
+
+#### Converting a Depot
+The following will convert an AccuRev depot named "acdepot", using the AccuRev stream named "acstream" as the basis. The working directory for the git repo is the current directory. The converter will use "acuser"/"acpass" as credentials for logging into AccuRev. Resuming a conversion is supported via the "-r true" switch, so this command can be run multiple times and will automatically resume from where it left off.
+
+```bat
+accurev2git.exe -d acdepot -s acstream -w . -r true -u acuser -p acpass
+```
 
 ---
 ---
