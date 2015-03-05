@@ -7,6 +7,7 @@ using System.Linq;
 using System.Xml.Linq;
 using CommandLine;
 using CommandLine.Text;
+using Mono.Unix;
 
 using JunctionPointUtils;
 
@@ -115,8 +116,17 @@ namespace AccuRev2Git
 
 			if (xdoc.Document == null || xdoc.Nodes().Any() == false)
 			{
-				Console.WriteLine("Retrieving complete history of {0} depot, {1} stream, from AccuRev server...", depotName, streamName);
-				var temp = execAccuRev(string.Format("hist -p \"{0}\" -s \"{0}{1}\" -k promote -fx", depotName, (string.IsNullOrEmpty(streamName) ? "" : "_" + streamName)), workingDir);
+				string temp = "";
+				if (string.IsNullOrEmpty(streamName))
+				{
+					Console.WriteLine("Retrieving complete history of {0} depot from AccuRev server...", depotName);
+					temp = execAccuRev(string.Format("hist -p \"{0}\" -k promote -fx", depotName), workingDir);
+				}
+				else
+				{
+					Console.WriteLine("Retrieving complete history of {0} depot, {1} stream, from AccuRev server...", depotName, streamName);
+					temp = execAccuRev(string.Format("hist -p \"{0}\" -s \"{1}\" -k promote -fx", depotName, streamName), workingDir);
+				}
 				File.WriteAllText(tempFile, temp);
 				xdoc = XDocument.Parse(temp);
 			}
@@ -133,8 +143,17 @@ namespace AccuRev2Git
 					throw new ApplicationException("Cannot resume - no last transaction was found in git config key 'accurev2git.lasttran'.");
 
 				Console.WriteLine("Resuming from last completed transaction {0}.", lastTransaction);
-				Console.WriteLine("Retrieving history as of {0} for {1} depot, {2} stream, from AccuRev server...", lastTransaction, depotName, streamName);
-				var temp = execAccuRev(string.Format("hist -p \"{0}\" -s \"{0}{1}\" -k promote -t {2}-now -fx", depotName, (string.IsNullOrEmpty(streamName) ? "" : "_" + streamName), lastTransaction), workingDir);
+				string temp = "";
+				if (string.IsNullOrEmpty(streamName))
+				{
+					Console.WriteLine("Retrieving history as of {0} for {1} depot from AccuRev server...", lastTransaction, depotName);
+					temp = execAccuRev(string.Format("hist -p \"{0}\" -k promote -t {1}-now -fx", depotName, lastTransaction), workingDir);
+				}
+				else
+				{
+					Console.WriteLine("Retrieving history as of {0} for {1} depot, {2} stream, from AccuRev server...", lastTransaction, depotName, streamName);
+					temp = execAccuRev(string.Format("hist -p \"{0}\" -s \"{1}\" -k promote -t {2}-now -fx", depotName, streamName, lastTransaction), workingDir);
+				}
 				File.WriteAllText(tempFile, temp);
 				xdoc = XDocument.Parse(temp);
 
@@ -168,6 +187,7 @@ namespace AccuRev2Git
 				execGitRaw("add --all", workingDir);
 				execGitCommit(string.Format("commit --date={0} --author={1} -m \"Initial git commit.\"", initialDate, defaultGitUser), workingDir, initialDate.ToString(), defaultGitUser);
 				execGitRaw(string.Format("checkout -b \"{0}\"", streamName), workingDir, true);
+				execGitRaw(string.Format("config accurev2git.lasttran {0}", 1), workingDir);
 			}
 			foreach (var transaction in nodes)
 			{
@@ -183,16 +203,20 @@ namespace AccuRev2Git
 		static void loadTransaction(string depotName, string streamName, int transactionId, string workingDir, XElement transaction)
 		{
 // ReSharper disable PossibleNullReferenceException
-			var accurevUser = transaction.Attribute("user").Value;
-			var gitUser = translateUser(accurevUser);
-			var unixDate = long.Parse(transaction.Attribute("time").Value);
+			string accurevUser = transaction.Attribute("user").Value;
+			GitUser gitUser = translateUser(accurevUser);
+			if (gitUser == null)
+			{
+				throw new ApplicationException(string.Format("Accurev user {0} not recognised in Git", accurevUser));
+			}
+			Int64 unixDate = long.Parse(transaction.Attribute("time").Value);
 // ReSharper restore PossibleNullReferenceException
 			var issueNumNodes = transaction.Descendants("version").Descendants("issueNum");
 			var issueNums = (issueNumNodes == null || issueNumNodes.Count() == 0 ? string.Empty : issueNumNodes.Select(n => n.Value).Distinct().Aggregate(string.Empty, (seed, num) => seed + ", " + num).Substring(2));
 			var commentNode = transaction.Descendants("comment").FirstOrDefault();
-			var comment = (commentNode == null ? string.Empty : commentNode.Value);
+			string comment = (commentNode == null ? string.Empty : commentNode.Value);
 			comment = string.IsNullOrEmpty(comment) ? "[no original comment]" : comment;
-			var commentLines = comment.Split(new[] { "\n" }, 2, StringSplitOptions.None);
+			string[] commentLines = comment.Split(new[] { "\n" }, 2, StringSplitOptions.None);
 			if (commentLines.Length > 1)
 				comment = commentLines[0] + Environment.NewLine + Environment.NewLine + commentLines[1];
 			comment += string.Format("{0}{0}[AccuRev Transaction #{1}]", Environment.NewLine, transactionId);
@@ -202,7 +226,14 @@ namespace AccuRev2Git
 			var commentFilePath = Path.GetFullPath(commentFile);
 			File.WriteAllText(commentFile, comment);
 			execClean(workingDir);
-			execAccuRev(string.Format("pop -R -O -v \"{0}{1}\" -L . -t {2} .", depotName, (string.IsNullOrEmpty(streamName) ? "" : "_" + streamName), transactionId), workingDir);
+			if (string.IsNullOrEmpty(streamName))
+			{
+				execAccuRev(string.Format("pop -R -O -v \"{0}\" -L . -t {1} .", depotName, transactionId), workingDir);
+			}
+			else
+			{
+				execAccuRev(string.Format("pop -R -O -v \"{0}\" -L . -t {1} .", streamName, transactionId), workingDir);
+			}
 			execGitRaw("add --all", workingDir);
 			execGitCommit(string.Format("commit --date={0} --author={1} --file=\"{2}\"", unixDate, gitUser, commentFilePath), workingDir, unixDate.ToString(), gitUser);
 			execGitRaw(string.Format("config accurev2git.lasttran {0}", transactionId), workingDir);
@@ -220,16 +251,23 @@ namespace AccuRev2Git
 		/// </summary>
 		public static void deleteDirectory(string path)
 		{
-			// Check if it's a function
-			if (JunctionPoint.Exists(path))
+			if (Environment.OSVersion.Platform == PlatformID.Win32Windows)
 			{
-				JunctionPoint.Delete(path);
-				return;
+				// Check if it's a function
+				if (JunctionPoint.Exists(path))
+				{
+					JunctionPoint.Delete(path);
+					return;
+				}
 			}
 
-			foreach (string directory in Directory.GetDirectories(path))
+			Mono.Unix.UnixSymbolicLinkInfo info = new Mono.Unix.UnixSymbolicLinkInfo(path);
+			if (info.FileType == FileTypes.Directory)
 			{
-				deleteDirectory(directory);
+				foreach (string directory in Directory.GetDirectories(path))
+				{
+					deleteDirectory(directory);
+				}
 			}
 
 			try
