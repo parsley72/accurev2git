@@ -178,3 +178,8 @@ FakesAssemblies/
 
 # WinMerge
 *.bak
+
+# Igonre compiled python files.
+*.pyc
+*.suo
+*.bak
