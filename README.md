@@ -13,7 +13,7 @@ Both have a README.md tailored to their implementation in their respective folde
 ---
 ---
 
-Copyright (c) 2014 Ryan LaNeve
+Copyright (c) 2014 Ryan LaNeve & 2015 Lazar Sumar
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
