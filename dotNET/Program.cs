@@ -9,8 +9,6 @@ using CommandLine;
 using CommandLine.Text;
 using Mono.Unix;
 
-using JunctionPointUtils;
-
 namespace AccuRev2Git
 {
 	class Options
@@ -251,16 +249,6 @@ namespace AccuRev2Git
 		/// </summary>
 		public static void deleteDirectory(string path)
 		{
-			if (Environment.OSVersion.Platform == PlatformID.Win32Windows)
-			{
-				// Check if it's a function
-				if (JunctionPoint.Exists(path))
-				{
-					JunctionPoint.Delete(path);
-					return;
-				}
-			}
-
 			Mono.Unix.UnixSymbolicLinkInfo info = new Mono.Unix.UnixSymbolicLinkInfo(path);
 			if (info.FileType == FileTypes.Directory)
 			{
